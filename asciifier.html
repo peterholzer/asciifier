@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en"><!--
+        (C) 2018 Peter Holzer, released to the public domain
+    --><head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <title>Unicode checker</title>
+
+
+        <script>
+            var baseChars = [];
+            for (var i = 97; i < 97 + 26; i++) {
+              baseChars.push(String.fromCharCode(i));
+            }
+
+            //if needed, handle fancy compound characters
+            baseChars = baseChars.concat('ss,aa,ae,ao,au,av,ay,dz,hv,lj,nj,oi,ou,oo,tz,vy'.split(','));
+
+            function isUpperCase(c) {
+                return c !== c.toLocaleLowerCase()
+            }
+
+            function toBaseChar(c) {
+                var cOpts = {sensitivity: 'base'};
+
+                //exit early for any non-alphabetical character
+                if (c.localeCompare('9', 'en', cOpts) <= 0) return c;
+
+                for (var i = 0; i < baseChars.length; i++) {
+                    var baseChar = baseChars[i];
+
+                    var comp = c.localeCompare(baseChar, 'en', cOpts);
+                    if (comp == 0) return (isUpperCase(c)) ? baseChar.toUpperCase() : baseChar;
+                }
+
+                return c;
+            }
+
+            function latinify(str) {
+                return str.replace(/[^\w\s\d]/g, function(c) {
+                    return toBaseChar(c);
+                })
+            }
+
+            String.prototype.asciify = latinify;
+
+
+
+            function noTilde (s) {
+                if (s.normalize != undefined) {
+                    s = s.normalize ("NFKD");
+                }
+                return s.replace (/[\u0300-\u036F]/g, "");
+            }
+
+
+            function containsNonAsciiCodepoints(s) {
+                return /[^\u0000-\u007f]/.test(s);
+            }
+
+            // Get text of field #1, replace unicode and set as text of field #2
+            function updateOutputTextField() {
+                var text = document.getElementById("text_input_field").value;
+
+                text = latinify(text);
+                text = text.replace(/\u058a/g, "-");        // armenian hyphen
+                text = text.replace(/\u05be/g, "'");        // hebrew punctuation maqaf
+                text = text.replace(/\u1400/g, "=");        // canadian syllabics hyphen
+                text = text.replace(/\u1806/g, "-");        // mongolian todo soft hyphen
+                text = text.replace(/\u2010/g, "-");        // hyphen
+                text = text.replace(/\u2011/g, "-");        // non-breaking hyphen
+                text = text.replace(/\u2012/g, "-");        // figure dash
+                text = text.replace(/\u2013/g, "-");        // en dash
+                text = text.replace(/\u2014/g, "--");       // em dash
+                text = text.replace(/\u2015/g, "--");       // horizontal bar
+                text = text.replace(/\u2053/g, "~");        // swung dash
+                text = text.replace(/\u207b/g, "~");        // superscript minus
+                text = text.replace(/\u208b/g, "~");        // subscript minus
+                text = text.replace(/\u2212/g, "-");        // minus sign
+                text = text.replace(/\u2e17/g, "=");        // double oblique hyphen
+                text = text.replace(/\u2e3a/g, "----");     // two-em dash
+                text = text.replace(/\u2e3b/g, "------");   // three-em dash
+                text = text.replace(/\u301c/g, "~");        // wave dash
+                text = text.replace(/\u3030/g, "~");        // wavy dash
+                text = text.replace(/\u30a0/g, "=");        // katakana-hiragana double hyphen
+                text = text.replace(/\ufe31/g, "|");        // vertical variant of em dash
+                text = text.replace(/\ufe32/g, "|");        // vertical variant of en dash
+                text = text.replace(/\ufe58/g, "-");        // small em dash
+                text = text.replace(/\ufe63/g, "-");        // small hyphen-minus
+                text = text.replace(/\uff0d/g, "-");        // fullwidth hyphen-minus
+                text = text.replace(/\u00B6/g, "<br>");     // Pilcrow
+                text = text.replace(/\u00A1/g, "!");        // Inverted exclamation mark
+                text = text.replace(/\u00BF/g, "?");        // Inverted question mark
+                text = text.replace(/\u0022/g, "\"");       // quotation mark
+                text = text.replace(/\u2039/g, "<");        // single left-pointing angle quotation
+                text = text.replace(/\u203A/g, ">");        // single right-pointing angle quotation
+                text = text.replace(/\u00AB/g, "<<");       // left angle quote
+                text = text.replace(/\u00BB/g, ">>");       // right angle quote
+                text = text.replace(/\u2018/g, "'");        // left single quotation mark
+                text = text.replace(/\u2019/g, "'");        // right single quotation mark
+                text = text.replace(/\u201A/g, "'");        // single low-9 quotation mark
+                text = text.replace(/\u201C/g, "\"");       // left double quotation mark
+                text = text.replace(/\u201D/g, "\"");       // right double quotation mark
+                text = text.replace(/\u201E/g, "\"");       // double low-9 quotation mark
+                text = text.replace(/\u201F/g, "\"");       // double high-reversed-9 quotation mark
+                text = text.replace(/\u2022/g, "*");        // bullet
+
+                document.getElementById("text_output_field").value = text;
+
+                // Check processed text and print Warning/Ok message
+                if(containsNonAsciiCodepoints(text)) {
+                    document.getElementById("message_output").innerHTML  = '<tt style="color:darkred">Warning: Remaining text still contains non-ASCII characters (right text area)</tt>';
+                } else {
+                    document.getElementById("message_output").innerHTML  = '<tt style="color:darkgreen">Ok: Remaining text contains only ASCII characters (right text area)</tt>';
+                }
+
+                // Check input field for non-ascii and color background
+                if(containsNonAsciiCodepoints(document.getElementById("text_input_field").value)) {
+                    document.getElementById("text_input_field").style.backgroundColor = "#ffdddd";
+                } else {
+                    document.getElementById("text_input_field").style.backgroundColor = "#ddffdd";
+                }
+
+                // Check output field for non-ascii and color background
+                if(containsNonAsciiCodepoints(document.getElementById("text_output_field").value)) {
+                    document.getElementById("text_output_field").style.backgroundColor = "#ffdddd";
+                } else {
+                    document.getElementById("text_output_field").style.backgroundColor = "#ddffdd";
+                }
+            }
+
+            updateOutputTextField();
+        </script>
+    </head>
+
+    <body>
+        <textarea name="text_input_field" id="text_input_field" rows="50" style="width:49%" onkeyup="updateOutputTextField()" onchange="updateOutputTextField()"></textarea>
+        <textarea name="text_output_field" id="text_output_field" rows="50" style="width:49%"></textarea>
+        <p id="message_output"></p>
+        <p>inefficient implementation - efficient result</p>
+    </body>
+</html>
